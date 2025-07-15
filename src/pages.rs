@@ -5,6 +5,6 @@ pub struct MainPage;
 
 #[template(path = "pages/greeting.tmp")]
 pub struct GreetingPage {
-    name: String,
+    name: &'static str,
     is_greeting: bool,
 }

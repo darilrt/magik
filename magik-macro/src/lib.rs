@@ -47,7 +47,7 @@ fn implement_renderable(item: &ItemStruct, code: &proc_macro2::TokenStream) -> T
         impl magik::Renderable for #name {
             fn render(self) -> String {
                 #code
-                __hidden::magik_render(&self)
+                __hidden::magik__render(&self)
             }
         }
     }

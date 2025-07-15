@@ -29,6 +29,18 @@ impl Parser {
     }
 
     pub fn next(&mut self) -> Option<TemplateData> {
+        while let Some(data) = self.next_impl() {
+            match data {
+                TemplateData::String(s) if s.is_empty() => continue,
+                TemplateData::Code(code) if code.trim().is_empty() => continue,
+                _ => return Some(data),
+            }
+        }
+
+        None
+    }
+
+    fn next_impl(&mut self) -> Option<TemplateData> {
         while self.pos < self.length {
             let char = self.source[self.pos];
 
@@ -42,7 +54,7 @@ impl Parser {
 
                         self.state = ParserState::InKey;
 
-                        return Some(TemplateData::Html(str.iter().collect::<String>()));
+                        return Some(TemplateData::String(str.iter().collect::<String>()));
                     }
                 }
                 ParserState::InKey => {
@@ -74,7 +86,7 @@ impl Parser {
                 return None; // No more data to return
             }
 
-            return Some(TemplateData::Html(str));
+            return Some(TemplateData::String(str));
         }
 
         None
@@ -91,13 +103,13 @@ mod test {
         let mut parser = Parser::new(input);
 
         let next = parser.next().unwrap();
-        assert_eq!(next, TemplateData::Html("<h1>Hello, ".to_string()));
+        assert_eq!(next, TemplateData::String("<h1>Hello, ".to_string()));
 
         let next = parser.next().unwrap();
         assert_eq!(next, TemplateData::Code("{ name }".to_string()));
 
         let next = parser.next().unwrap();
-        assert_eq!(next, TemplateData::Html("!</h1> ".to_string()));
+        assert_eq!(next, TemplateData::String("!</h1> ".to_string()));
 
         let next = parser.next().unwrap();
         assert_eq!(next, TemplateData::Code("{ test }".to_string()));

@@ -34,20 +34,18 @@ pub fn compile_template(
 ) -> proc_macro2::TokenStream {
     let mut quotes = vec![];
 
-    quotes.push(quote! {
-        #[inline(always)]
-        fn render_and_validate<T: magik::Renderable>(value: T) -> String {
-            value.render()
-        }
+    let capacity = tmp.len();
 
-        let mut result = String::new();
+    quotes.push(quote! {
+        let mut magik__result = Vec::with_capacity(#capacity);
+        // let mut result = String::new();
     });
 
     for data in tmp {
         match data {
-            magik::TemplateData::Html(html) => {
+            magik::TemplateData::String(html) => {
                 quotes.push(quote! {
-                   result.push_str(#html);
+                   magik__result.push(#html.to_string());
                 });
             }
             magik::TemplateData::Code(code) => {
@@ -70,9 +68,7 @@ pub fn compile_template(
                 // call a function to check if block returns a value
                 if is_block_returning_value(&code) {
                     quotes.push(quote_spanned! {
-                        code.span() =>
-                            let value = #code;
-                            result.push_str(render_and_validate(value).as_str());
+                        code.span() => magik__result.push(magik__render_and_validate(#code));
                     });
                 } else {
                     code.stmts.iter().for_each(|stmt| {
@@ -85,15 +81,19 @@ pub fn compile_template(
         }
     }
 
-    quotes.push(quote! {
-        result
-    });
-
     quote! {
         mod __hidden {
+            use magik::Choosable;
             use super::#struct_name;
-            pub fn magik_render(props: &#struct_name) -> String {
+
+            #[inline(always)]
+            fn magik__render_and_validate<T: magik::Renderable>(value: T) -> String {
+                value.render()
+            }
+
+            pub fn magik__render(props: &#struct_name) -> String {
                 #(#quotes)*
+                magik__result.concat()
             }
         }
     }

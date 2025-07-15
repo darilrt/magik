@@ -1,4 +1,1 @@
-{{ 
-    let GreetingPage { name, is_greeting } = props;
-}}
-<h1>{{ if *is_greeting { "Hello".to_string() } else { "Bye".to_string() } }}, {{ name }}!</h1>
+<h1>{{ props.is_greeting.choose("Hello", "Bye").to_string() }}, {{ props.name }} {{ props.name }} !</h1>
