@@ -18,7 +18,7 @@ pub fn template_str(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let item = parse_macro_input!(item as ItemStruct);
 
-    let tmp = compile_template(&parse_template(&input), item.ident.clone());
+    let tmp = compile_template(&parse_template(&input), &item);
 
     implement_renderable(&item, &tmp)
 }
@@ -30,10 +30,7 @@ pub fn template(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let item = parse_macro_input!(item as ItemStruct);
 
-    let code = compile_template(
-        &parse_template(read_template_file(&path).as_str()),
-        item.ident.clone(),
-    );
+    let code = compile_template(&parse_template(read_template_file(&path).as_str()), &item);
 
     implement_renderable(&item, &code)
 }

@@ -4,7 +4,7 @@ use magik_macro::template;
 pub struct MainPage;
 
 #[template(path = "pages/greeting.tmp")]
-pub struct GreetingPage {
-    name: &'static str,
+pub struct GreetingPage<'a> {
+    name: &'a str,
     is_greeting: bool,
 }

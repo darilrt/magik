@@ -1,7 +1,7 @@
 use std::vec;
 
 use quote::{quote, quote_spanned};
-use syn::{Ident, spanned::Spanned};
+use syn::{Ident, ItemStruct, spanned::Spanned};
 
 use crate::is_block_returning_value;
 
@@ -30,7 +30,7 @@ pub fn parse_template(input: &str) -> Vec<magik::TemplateData> {
 
 pub fn compile_template(
     tmp: &Vec<magik::TemplateData>,
-    struct_name: Ident,
+    struct_item: &ItemStruct,
 ) -> proc_macro2::TokenStream {
     let mut quotes = vec![];
 
@@ -81,6 +81,10 @@ pub fn compile_template(
         }
     }
 
+    let struct_name = &struct_item.ident;
+    let generics = &struct_item.generics;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     quote! {
         mod __hidden {
             use magik::Choosable;
@@ -91,7 +95,7 @@ pub fn compile_template(
                 value.render()
             }
 
-            pub fn magik__render(props: &#struct_name) -> String {
+            pub fn magik__render #impl_generics(props: &#struct_name #ty_generics) -> String #where_clause {
                 #(#quotes)*
                 magik__result.concat()
             }
