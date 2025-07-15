@@ -1,0 +1,11 @@
+[package]
+name = "iron-test"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+magik-macro = { path = "magik-macro" }
+magik = { path = "magik" }
+
+[workspace]
+members = ["magik", "magik-macro"]

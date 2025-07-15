@@ -1,0 +1,7 @@
+{{ use crate::pages::GreetingPage; }}
+<!DOCTYPE html>
+<html>
+  <body>
+    {{ GreetingPage { name: "World".to_string(), is_greeting: true, } }}
+  </body>
+</html>

@@ -1,0 +1,4 @@
+{{ 
+    let GreetingPage { name, is_greeting } = props;
+}}
+<h1>{{ if *is_greeting { "Hello".to_string() } else { "Bye".to_string() } }}, {{ name }}!</h1>
