@@ -1,15 +1,26 @@
+use magik::Renderable;
 use magik_macro::template;
 
-#[template(path = "pages/main.tmp")]
-pub struct MainPage;
+#[template(source = "<h1>Welcome to the Main Page!</h1>")]
+pub struct SimpleBody;
 
-#[template(path = "pages/greeting.tmp")]
-pub struct GreetingPage<'a> {
-    name: &'a str,
-    is_greeting: bool,
-}
-
-#[template("<h1>Hello, {{ props.name }}!</h1>")]
-pub struct InlineGreetingPage<'a> {
-    name: &'a str,
+#[template(
+    r#"
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    </head>
+    <body>
+        {{
+            let a = "KK Code";
+            props.body
+        }}
+        {{ props.title }}
+    </body>
+</html>
+"#
+)]
+pub struct Layout<T: magik::Renderable> {
+    pub body: T,
+    pub title: String,
 }

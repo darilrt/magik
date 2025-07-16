@@ -1,20 +1,20 @@
 use crate::Renderable;
 
 /// A structure that accumulates multiple templates and renders them concatenated
-/// 
+///
 /// This allows you to collect multiple `Renderable` items and render them all
 /// at once as a single concatenated string.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use magik::{TemplateAccumulator, Renderable};
-/// 
+///
 /// let mut acc = TemplateAccumulator::new();
 /// acc.push("Hello, ");
 /// acc.push("World!");
 /// acc.push(42);
-/// 
+///
 /// assert_eq!(acc.render(), "Hello, World!42");
 /// ```
 #[derive(Debug, Clone, Default)]
@@ -29,25 +29,25 @@ impl TemplateAccumulator {
             templates: Vec::new(),
         }
     }
-    
+
     /// Creates a new template accumulator with the specified capacity
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             templates: Vec::with_capacity(capacity),
         }
     }
-    
+
     /// Adds a renderable item to the accumulator
     pub fn push<T: Renderable>(&mut self, item: T) {
         self.templates.push(item.render());
     }
-    
+
     /// Adds a renderable item to the accumulator and returns self for chaining
     pub fn add<T: Renderable>(mut self, item: T) -> Self {
         self.push(item);
         self
     }
-    
+
     /// Extends the accumulator with an iterator of renderable items
     pub fn extend<I, T>(&mut self, iter: I)
     where
@@ -58,27 +58,27 @@ impl TemplateAccumulator {
             self.push(item);
         }
     }
-    
+
     /// Returns the number of accumulated templates
     pub fn len(&self) -> usize {
         self.templates.len()
     }
-    
+
     /// Returns true if the accumulator is empty
     pub fn is_empty(&self) -> bool {
         self.templates.is_empty()
     }
-    
+
     /// Clears all accumulated templates
     pub fn clear(&mut self) {
         self.templates.clear();
     }
-    
+
     /// Renders all accumulated templates with a custom separator
     pub fn render_with_separator(&self, separator: &str) -> String {
         self.templates.join(separator)
     }
-    
+
     /// Consumes the accumulator and returns the inner vector of rendered strings
     pub fn into_inner(self) -> Vec<String> {
         self.templates
@@ -86,7 +86,7 @@ impl TemplateAccumulator {
 }
 
 impl Renderable for TemplateAccumulator {
-    fn render(self) -> String {
+    fn render(&self) -> String {
         self.templates.concat()
     }
 }
@@ -117,7 +117,7 @@ impl<T: Renderable> std::ops::AddAssign<T> for TemplateAccumulator {
 // Allow concatenating two accumulators
 impl std::ops::Add for TemplateAccumulator {
     type Output = Self;
-    
+
     fn add(mut self, other: Self) -> Self {
         self.templates.extend(other.templates);
         self
@@ -134,7 +134,7 @@ mod tests {
         acc.push("Hello, ");
         acc.push("World!");
         acc.push(42);
-        
+
         assert_eq!(acc.render(), "Hello, World!42");
     }
 
@@ -144,7 +144,7 @@ mod tests {
             .add("Hello, ")
             .add("World!")
             .add(42);
-        
+
         assert_eq!(acc.render(), "Hello, World!42");
     }
 
@@ -152,7 +152,7 @@ mod tests {
     fn test_from_vec() {
         let items = vec!["Hello", "World", "!"];
         let acc = TemplateAccumulator::from(items);
-        
+
         assert_eq!(acc.render(), "HelloWorld!");
     }
 
@@ -162,7 +162,7 @@ mod tests {
             .add("Hello")
             .add("World")
             .add("!");
-        
+
         assert_eq!(acc.render_with_separator(" "), "Hello World !");
         assert_eq!(acc.render_with_separator(", "), "Hello, World, !");
     }
@@ -173,10 +173,10 @@ mod tests {
         acc += "Hello";
         acc += " ";
         acc += "World";
-        
+
         let acc2 = TemplateAccumulator::new().add("!");
         let combined = acc + acc2;
-        
+
         assert_eq!(combined.render(), "Hello World!");
     }
 
@@ -184,7 +184,7 @@ mod tests {
     fn test_collect() {
         let items = vec!["a", "b", "c"];
         let acc: TemplateAccumulator = items.into_iter().collect();
-        
+
         assert_eq!(acc.render(), "abc");
     }
 }

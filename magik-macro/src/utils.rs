@@ -1,7 +1,7 @@
 use std::vec;
 
 use quote::{quote, quote_spanned};
-use syn::{Ident, ItemStruct, spanned::Spanned};
+use syn::{Ident, ItemStruct, Stmt, parse_quote_spanned, spanned::Spanned};
 
 use crate::is_block_returning_value;
 
@@ -67,8 +67,30 @@ pub fn compile_template(
 
                 // call a function to check if block returns a value
                 if is_block_returning_value(&code) {
+                    let mut stmts = code.stmts.clone();
+                    let last_stmt = stmts.pop().unwrap();
+
+                    let new_last = match last_stmt {
+                        Stmt::Expr(expr, None) => Stmt::Expr(
+                            syn::Expr::Call(parse_quote_spanned! {expr.span() =>
+                                magik__render_and_validate(&#expr)
+                            }),
+                            None,
+                        ),
+                        other => other,
+                    };
+
+                    let new_block = syn::Block {
+                        brace_token: code.brace_token,
+                        stmts: {
+                            let mut stmts2 = stmts;
+                            stmts2.push(new_last);
+                            stmts2
+                        },
+                    };
+
                     quotes.push(quote_spanned! {
-                        code.span() => magik__result.push(magik__render_and_validate(#code));
+                        code.span() => magik__result.push(#new_block);
                     });
                 } else {
                     code.stmts.iter().for_each(|stmt| {
@@ -91,7 +113,7 @@ pub fn compile_template(
             use super::#struct_name;
 
             #[inline(always)]
-            fn magik__render_and_validate<T: magik::Renderable>(value: T) -> String {
+            fn magik__render_and_validate<'a, T: magik::Renderable>(value: &'a T) -> String {
                 value.render()
             }
 

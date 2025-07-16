@@ -4,26 +4,34 @@ A templating library for Rust that allows creating compile-time safe templates w
 
 ## Table of Contents
 
-- [Features](#features)
-- [Installation](#installation)
-- [Basic Usage](#basic-usage)
-- [Template Syntax](#template-syntax)
-  - [Variable Interpolation](#variable-interpolation)
-  - [Global Scope Statements](#global-scope-statements)
-  - [Conditional Logic with Choosable](#conditional-logic-with-choosable)
-  - [Complex Rust Logic](#complex-rust-logic)
-  - [Using Other Components](#using-other-components)
-- [System Components](#system-components)
-  - [Parser](#1-parser-magikparser)
-  - [TemplateData](#2-templatedata)
-  - [Trait Renderable](#3-trait-renderable)
-  - [Trait Choosable](#4-trait-choosable)
-- [Macros](#macros)
-- [Advantages](#advantages)
-- [Limitations](#limitations)
-- [Development](#development)
-  - [Automatic Template Recompilation](#automatic-template-recompilation)
-- [Project Structure](#project-structure)
+- [Magik 🪄](#magik-)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+    - [Running the Project](#running-the-project)
+  - [Installation](#installation)
+  - [Basic Usage](#basic-usage)
+    - [1. Define a structure with template](#1-define-a-structure-with-template)
+    - [2. Create the template file](#2-create-the-template-file)
+    - [3. Render the template](#3-render-the-template)
+  - [Template Syntax](#template-syntax)
+    - [Variable Interpolation](#variable-interpolation)
+    - [Global Scope Statements](#global-scope-statements)
+    - [Conditional Logic with Choosable](#conditional-logic-with-choosable)
+    - [Complex Rust Logic](#complex-rust-logic)
+    - [Using Other Components](#using-other-components)
+  - [System Components](#system-components)
+    - [1. Parser (`magik::Parser`)](#1-parser-magikparser)
+    - [2. TemplateData](#2-templatedata)
+    - [3. Trait Renderable](#3-trait-renderable)
+    - [4. Trait Choosable](#4-trait-choosable)
+  - [Macros](#macros)
+    - [`#[template(path = "path")]`](#templatepath--path)
+    - [`#[template(source = "template")]` or `#[template_str("template")]`](#templatesource--template-or-template_strtemplate)
+  - [Advantages](#advantages)
+  - [Limitations](#limitations)
+  - [Development](#development)
+    - [Automatic Template Recompilation](#automatic-template-recompilation)
+  - [Project Structure](#project-structure)
 
 ## Features
 
@@ -228,6 +236,7 @@ pub trait Renderable {
 // - String, &str
 // - i32, f64, bool
 // - Option<T: Renderable>
+// - Vec<T: Renderable>
 // - ()
 ```
 
@@ -261,14 +270,19 @@ pub struct UserPage {
 }
 ```
 
-### `#[template_str("template")]`
+### `#[template(source = "template")]` or `#[template_str("template")]`
 
 Uses an inline template:
 
 ```rust
-#[template_str("<p>Hello, {{ props.name }}!</p>")]
-pub struct InlineGreeting {
-    name: String,
+#[template(source = "<h1>Hello, {{ props.name }}!</h1>")]
+pub struct InlineGreeting<'a> {
+    name: &'a str,
+}
+
+#[template_str("<h1>Hello, {{ props.name }}!</h1>")]
+pub struct InlineGreetingStr<'a> {
+    name: &'a str,
 }
 ```
 
