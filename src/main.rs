@@ -1,10 +1,6 @@
 mod pages;
 
 use magik::Renderable;
-use pages::MainPage;
+use pages::InlineGreetingPage;
 
-fn main() {
-    let a = MainPage {};
-
-    println!("{}", a.render());
-}
+fn main() {}
