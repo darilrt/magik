@@ -18,7 +18,7 @@ pub fn template_str(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let item = parse_macro_input!(item as ItemStruct);
 
-    let tmp = compile_template(&parse_template(&input), item.ident.clone());
+    let tmp = compile_template(&parse_template(&input), &item);
 
     implement_renderable(&item, &tmp)
 }
@@ -44,14 +44,16 @@ pub fn template(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 fn implement_renderable(item: &ItemStruct, code: &proc_macro2::TokenStream) -> TokenStream {
     let name = &item.ident;
+    let generics = &item.generics;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote! {
         #item
 
-        impl magik::Renderable for #name {
+        impl #impl_generics magik::Renderable for #name #ty_generics #where_clause {
             fn render(self) -> String {
                 #code
-                __hidden::magik_render(&self)
+                __hidden::magik__render(&self)
             }
         }
     }
