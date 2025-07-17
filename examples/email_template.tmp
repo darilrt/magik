@@ -1,0 +1,11 @@
+Hello {{ props.name }}!
+Welcome to our {{ props.site_name }}.
+
+{{ props.is_member.choose("Thanks for being a member!", "Consider joining our membership!") }}
+
+Your current status: {{ props.status }}
+
+{{ props.has_premium.choose("🌟 You have premium access", "Upgrade to premium for more features") }}
+
+Best regards,
+The {{ props.site_name }} Team

@@ -1,3 +1,7 @@
+use crate::pages::MainPage;
+
 mod pages;
 
-fn main() {}
+fn main() {
+    println!("{}", MainPage {});
+}

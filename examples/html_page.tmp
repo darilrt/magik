@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ props.title }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { background: #f4f4f4; padding: 20px; border-radius: 5px; }
+        .content { margin: 20px 0; }
+        .footer { text-align: center; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ props.title }}</h1>
+            <p>{{ props.subtitle }}</p>
+        </div>
+        
+        <div class="content">
+            {{ props.content }}
+        </div>
+        
+        <div class="footer">
+            <p>{{ props.footer_text }}</p>
+        </div>
+    </div>
+</body>
+</html>

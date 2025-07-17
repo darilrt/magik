@@ -1,6 +1,6 @@
 # Magik 🪄
 
-A templating library for Rust that allows creating compile-time safe templates with type-safe syntax and automatic HTML code generation.
+A templating library for Rust that allows creating compile-time safe templates with type-safe syntax and powerful features.
 
 ## Table of Contents
 
@@ -348,4 +348,4 @@ magik/
 
 ---
 
-*Magik makes HTML generation in Rust magical* ✨
+*Magik makes String generation in Rust magical* ✨

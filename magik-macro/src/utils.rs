@@ -1,7 +1,7 @@
 use std::vec;
 
 use quote::{quote, quote_spanned};
-use syn::{Ident, ItemStruct, Stmt, parse_quote_spanned, spanned::Spanned};
+use syn::{ItemStruct, Stmt, parse_quote_spanned, spanned::Spanned};
 
 use crate::is_block_returning_value;
 

@@ -1,9 +1,8 @@
 use magik_macro::template;
 
-#[template(source = "<h1>Welcome to the Main Page!</h1>")]
+#[template(source = "Welcome to the Main Page!")]
 pub struct MainPage;
 
 fn main() {
-    let main_page = MainPage;
-    println!("{}", main_page);
+    println!("{}", MainPage);
 }

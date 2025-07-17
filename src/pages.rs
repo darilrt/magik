@@ -1,8 +1,21 @@
-use magik::Renderable;
 use magik_macro::template;
 
-#[template(source = "<h1>Welcome to the Main Page!</h1>")]
-pub struct SimpleBody;
+#[template(
+    r#"
+{{ use crate::pages::Layout; }}
+{{ use crate::pages::Button; }}
+{{
+    Layout { 
+        title: "Main Page",
+        body: vec![
+            "<p>Welcome to the main page!</p>".boxed(),
+            Button { label: "Click Me" }.boxed(),
+        ]
+    }
+}}
+"#
+)]
+pub struct MainPage {}
 
 #[template(
     r#"
@@ -11,16 +24,18 @@ pub struct SimpleBody;
     <head>
     </head>
     <body>
-        {{
-            let a = "KK Code";
-            props.body
-        }}
-        {{ props.title }}
+        <h1>{{ props.title }}</h1>
+        {{ props.body }}
     </body>
 </html>
 "#
 )]
-pub struct Layout<T: magik::Renderable> {
+pub struct Layout<'a, T: magik::Renderable> {
+    pub title: &'a str,
     pub body: T,
-    pub title: String,
+}
+
+#[template("<button>{{ props.label }}</button>")]
+pub struct Button<'a> {
+    pub label: &'a str,
 }
