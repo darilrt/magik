@@ -3,14 +3,6 @@
 version = 4
 
 [[package]]
-name = "iron-test"
-version = "0.1.0"
-dependencies = [
- "magik",
- "magik-macro",
-]
-
-[[package]]
 name = "magik"
 version = "0.1.0"
 

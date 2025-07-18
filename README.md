@@ -7,7 +7,7 @@ A templating library for Rust that allows creating compile-time safe templates w
 - [Magik 🪄](#magik-)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
-    - [Running the Project](#running-the-project)
+    - [Running the Examples](#running-the-examples)
   - [Installation](#installation)
   - [Basic Usage](#basic-usage)
     - [1. Define a structure with template](#1-define-a-structure-with-template)
@@ -41,12 +41,20 @@ A templating library for Rust that allows creating compile-time safe templates w
 - **Choosable trait**: Enables elegant conditional logic in templates
 - **Procedural macros**: Facilitates template component creation
 
-### Running the Project
+### Running the Examples
 
-To run the example project:
+All examples are located inside the `examples/` folder of the `magik_macro` crate.
+
+To run a specific example, use the following command from the root of the repository:
+
 
 ```bash
-cargo run
+cargo run -p magik-macro --example hello_magik
+```
+
+Expected output:
+```
+Hello from Magik!
 ```
 
 ## Installation
@@ -55,8 +63,8 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-magik = { git = "https://github.com/darilrt/magik/tree/master/magik" }
-magik-macro = { git = "https://github.com/darilrt/magik/tree/master/magik-macro" }
+magik = { git = "https://github.com/darilrt/magik", package = "magik" }
+magik-macro = { git = "https://github.com/darilrt/magik", package = "magik_macro" }
 ```
 
 ## Basic Usage
@@ -66,7 +74,7 @@ magik-macro = { git = "https://github.com/darilrt/magik/tree/master/magik-macro"
 ```rust
 use magik_macro::template;
 
-#[template(path = "pages/greeting.tmp")]
+#[template(path = "templates/greeting.tmp")]
 pub struct GreetingPage {
     name: &'static str,
     is_greeting: bool,
@@ -75,9 +83,10 @@ pub struct GreetingPage {
 
 ### 2. Create the template file
 
-**`pages/greeting.tmp`**:
-```html
-<h1>{{ props.is_greeting.choose("Hello", "Bye") }}, {{ props.name }}!</h1>
+**`templates/greeting.tmp`**:
+```
+{{ props.is_greeting.choose("Hello", "Goodbye") }}, {{ props.name }}!
+Welcome to our application.
 ```
 
 ### 3. Render the template
@@ -92,7 +101,8 @@ fn main() {
     };
     
     println!("{}", page.render());
-    // Output: <h1>Hello, World!</h1>
+    // Output: Hello, World!
+    //         Welcome to our application.
 }
 ```
 
@@ -105,96 +115,80 @@ Templates use the `{{ }}` syntax to embed **pure Rust code**. The behavior depen
 
 **Example demonstrating scope sharing:**
 
-```html
-<!-- Global imports and setup -->
+```
+# Configuration Report
 {{ use std::collections::HashMap; }}
 {{
     let mut config = HashMap::new();
     config.insert("theme", "dark");
     config.insert("lang", "en");
+    config.insert("debug", "true");
 }}
 
-<html data-theme="{{ config.get("theme").unwrap_or(&"light") }}">
-<head>
-    <title>{{ format!("App - {}", config.get("lang").unwrap_or(&"unknown")) }}</title>
-</head>
-<body>
-    <!-- The config HashMap is still available here -->
-    <div class="status">{{ config.len() }} settings loaded</div>
-</body>
-</html>
+Application Theme: {{ config.get("theme").unwrap_or(&"light") }}
+Language: {{ config.get("lang").unwrap_or(&"unknown") }}
+Debug Mode: {{ config.get("debug").unwrap_or(&"false") }}
+
+Total settings loaded: {{ config.len() }}
 ```
 
 ### Variable Interpolation
 
-```html
-<!-- Access to struct properties -->
-<p>{{ props.name }}</p>
-<p>{{ props.age }}</p>
-
-<!-- Any Rust expression that returns a value -->
-<p>{{ props.items.len() }}</p>
-<p>{{ format!("User: {}", props.username) }}</p>
+```
+User: {{ props.name }}
+Age: {{ props.age }}
+Items count: {{ props.items.len() }}
+Formatted: {{ format!("User: {}", props.username) }}
 ```
 
 ### Global Scope Statements
 
-```html
-<!-- Import statements (global scope) -->
+```
 {{ use std::collections::HashMap; }}
 
-<!-- Variable declarations (global scope) -->
 {{
     let user_count = props.users.len();
     let is_empty = user_count == 0;
 }}
 
-<!-- These variables can now be used in expressions -->
-<p>Total users: {{ user_count }}</p>
-<p>{{ is_empty.choose("No users found", "Users available") }}</p>
+Total users: {{ user_count }}
+Status: {{ is_empty.choose("No users found", "Users available") }}
 ```
 
 ### Conditional Logic with Choosable
 
-```html
-<!-- Elegant ternary operator -->
-<span>{{ props.is_active.choose("Active", "Inactive") }}</span>
-
-<!-- With functions -->
-<div>{{ props.show_content.choose_with(|| "Visible content", || "Hidden content") }}</div>
+```
+Status: {{ props.is_active.choose("Active", "Inactive") }}
+Content: {{ props.show_content.choose_with(|| "Visible content", || "Hidden content") }}
 ```
 
 ### Complex Rust Logic
 
-```html
-<!-- Control flow that returns values -->
-<div class="status">
-{{
+```
+User Type: {{
     if props.age >= 18 {
         format!("Adult ({})", props.age)
     } else {
         format!("Minor ({})", props.age)
     }
 }}
-</div>
 
-<!-- Pattern matching -->
-<p>Status: {{
+Connection Status: {{
     match props.status {
         "active" => "🟢 Online",
         "away" => "🟡 Away", 
         _ => "🔴 Offline"
     }
-}}</p>
+}}
 ```
 
 ### Using Other Components
 
-```html
+```
 {{ use crate::components::Button; }}
-<div>
-  {{ Button { text: "Click me", disabled: false } }}
-</div>
+Actions:
+{{ Button { text: "Submit", disabled: false } }}
+{{ Button { text: "Cancel", disabled: true } }}
 ```
 
 ## System Components
@@ -206,7 +200,7 @@ Analyzes templates and separates static text from Rust code:
 ```rust
 use magik::Parser;
 
-let mut parser = Parser::new("<h1>Hello, {{ name }}!</h1>");
+let mut parser = Parser::new("Hello, {{ name }}! Welcome to {{ app }}.");
 while let Some(data) = parser.next() {
     println!("{:?}", data);
 }
@@ -263,7 +257,7 @@ let message = is_admin.choose("Admin Panel", "User Panel");
 Applies a template from an external file:
 
 ```rust
-#[template(path = "pages/user.tmp")]
+#[template(path = "templates/user.tmp")]
 pub struct UserPage {
     username: String,
     email: String,
@@ -275,14 +269,16 @@ pub struct UserPage {
 Uses an inline template:
 
 ```rust
-#[template(source = "<h1>Hello, {{ props.name }}!</h1>")]
+#[template(source = "Hello, {{ props.name }}! Welcome to {{ props.app_name }}.")]
 pub struct InlineGreeting<'a> {
     name: &'a str,
+    app_name: &'a str,
 }
 
-#[template_str("<h1>Hello, {{ props.name }}!</h1>")]
+#[template_str("Hello, {{ props.name }}! Welcome to {{ props.app_name }}.")]
 pub struct InlineGreetingStr<'a> {
     name: &'a str,
+    app_name: &'a str,
 }
 ```
 
@@ -306,7 +302,7 @@ pub struct InlineGreetingStr<'a> {
 
 To automatically recompile your project when template files change, it's highly recommended to use a `build.rs` script. This ensures that any changes to your `.tmp` template files will trigger a rebuild.
 
-You can create a `build.rs` file or copy the file from the repository [`build.rs`](https://github.com/darilrt/magik/blob/master/build.rs) and place it in your project root. This script will watch for changes in the `pages/` directory (or any specified directory) and trigger a recompilation when necessary.
+You can create a `build.rs` file or copy the file from the repository [`build.rs`](https://github.com/darilrt/magik/blob/master/build.rs) and place it in your project root. This script will watch for changes in the `templates/` directory (or any specified directory) and trigger a recompilation when necessary.
 
 **Add to your `Cargo.toml`:**
 
@@ -320,7 +316,7 @@ build = "build.rs"  # Enable the build script
 ...
 ```
 
-With this setup, Cargo will automatically recompile your project whenever you modify any template file in the `pages/` directory.
+With this setup, Cargo will automatically recompile your project whenever you modify any template file in the `templates/` directory.
 
 ## Project Structure
 
@@ -334,18 +330,17 @@ magik/
 │   │   ├── renderable.rs # Renderable trait
 │   │   └── choosable.rs  # Choosable trait
 │   └── Cargo.toml
-├── magik-macro/        # Procedural macros
+├── magik_macro/        # Procedural macros
+│   │── examples/*      # Examples
 │   ├── src/
 │   │   ├── lib.rs
 │   │   ├── utils.rs    # Compilation utilities
 │   │   └── check_return.rs # Return analysis
 │   └── Cargo.toml
-├── pages/              # Example templates
-├── src/                # Example application
-|-- build.rs            # Example build script for automatic recompilation
+│── build.rs            # Example build script for automatic recompilation
 └── Cargo.toml
 ```
 
 ---
 
-*Magik makes String generation in Rust magical* ✨
+*Magik makes text generation in Rust magical* ✨

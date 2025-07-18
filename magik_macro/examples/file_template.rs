@@ -1,7 +1,7 @@
 use magik_macro::template;
 
 // Example using template from an external file
-#[template(path = "examples/email_template.tmp")]
+#[template(path = "magik_macro/examples/email_template.tmp")]
 pub struct EmailTemplate<'a> {
     pub name: &'a str,
     pub site_name: &'a str,

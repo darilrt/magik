@@ -17,7 +17,7 @@ pub struct Article<'a> {
 }
 
 // Example of a complete web page using a template
-#[template(path = "examples/html_page.tmp")]
+#[template(path = "magik_macro/examples/html_page.tmp")]
 pub struct WebPage<'a, T: magik::Renderable> {
     pub title: &'a str,
     pub subtitle: &'a str,

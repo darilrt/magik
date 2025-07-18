@@ -1,1 +1,0 @@
-<h1>{{ props.is_greeting.choose("Hello", "Bye").to_string() }}, {{ props.name }} {{ props.name }} !</h1>
