@@ -1,19 +1,19 @@
+use syn::Stmt;
+
 /// Checks if the block returns a value.
 /// this functions is used to determine if any branch of the block returns a value.
 pub fn is_block_returning_value(block: &syn::Block) -> bool {
-    if let Some(last) = block.stmts.last() {
-        if let syn::Stmt::Expr(expr, semi) = last {
-            if semi.is_some() {
-                return false; // If the last statement is an expression without a semicolon, which means it returns a value
-            }
+    if let Some(Stmt::Expr(expr, semi)) = block.stmts.last() {
+        if semi.is_some() {
+            return false; // If the last statement is an expression without a semicolon, which means it returns a value
+        }
 
-            if expr_has_return_value(expr) {
-                return true; // If the last expression returns a value
-            }
+        if expr_has_return_value(expr) {
+            return true; // If the last expression returns a value
+        }
 
-            if !semi.is_some() {
-                return true; // If the last statement is an expression without a semicolon, which means it returns a value
-            }
+        if !semi.is_some() {
+            return true; // If the last statement is an expression without a semicolon, which means it returns a value
         }
     }
     false // No return statement found
@@ -30,7 +30,7 @@ fn expr_has_return_value(expr: &syn::Expr) -> bool {
                 || expr
                     .else_branch
                     .as_ref()
-                    .map_or(false, |else_branch| expr_has_return_value(&else_branch.1))
+                    .is_some_and(|else_branch| expr_has_return_value(&else_branch.1))
         }
 
         syn::Expr::Match(expr) => expr

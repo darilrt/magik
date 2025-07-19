@@ -18,14 +18,11 @@ pub fn read_template_file(path: &str) -> String {
 }
 
 pub fn parse_template(input: &str) -> Vec<magik::TemplateData> {
-    let mut parser = magik::Parser::new(input);
-    let mut result = vec![];
+    let parser = magik::Parser::new(input);
 
-    while let Some(data) = parser.next() {
-        result.push(data);
-    }
-
-    result
+    parser
+        .collect::<Result<Vec<magik::TemplateData>, String>>()
+        .unwrap_or_else(|err| panic!("Template parsing error: {}", err))
 }
 
 pub fn compile_template(
@@ -56,8 +53,7 @@ pub fn compile_template(
                             code,
                             format!("Error parsing code: {}", err),
                         )
-                        .to_compile_error()
-                        .into();
+                        .to_compile_error();
                     }
                 };
 

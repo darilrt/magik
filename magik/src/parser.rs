@@ -6,90 +6,128 @@ enum ParserState {
     InKey,
 }
 
-pub struct Parser {
-    source: Vec<char>,
-    pos: usize,
-    last_pos: usize,
-    length: usize,
+pub struct Parser<'a> {
+    source: &'a str,
+    chars: std::str::Chars<'a>,
+    current: Option<char>,
+    next_char: Option<char>,
+    byte_pos: usize,
+    last_byte_pos: usize,
     state: ParserState,
 }
 
-impl Parser {
-    pub fn new(input: &str) -> Self {
-        let source: Vec<char> = input.chars().collect();
-        let length = source.len();
+impl Iterator for Parser<'_> {
+    type Item = Result<TemplateData, String>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.next_impl() {
+            Ok(Some(data)) => {
+                match data {
+                    TemplateData::String(s) if s.is_empty() => self.next(), // Recursivamente busca el siguiente
+                    TemplateData::Code(code) if code.trim().is_empty() => self.next(),
+                    _ => Some(Ok(data)),
+                }
+            }
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(input: &'a str) -> Self {
+        let mut chars = input.chars();
+        let current = chars.next();
+        let next_char = chars.next();
 
         Parser {
-            source,
-            pos: 0,
-            last_pos: 0,
-            length,
+            source: input,
+            chars,
+            current,
+            next_char,
+            byte_pos: 0,
+            last_byte_pos: 0,
             state: ParserState::Normal,
         }
     }
 
-    pub fn next(&mut self) -> Option<TemplateData> {
-        while let Some(data) = self.next_impl() {
-            match data {
-                TemplateData::String(s) if s.is_empty() => continue,
-                TemplateData::Code(code) if code.trim().is_empty() => continue,
-                _ => return Some(data),
-            }
+    fn advance(&mut self) -> Option<char> {
+        if let Some(ch) = self.current {
+            self.byte_pos += ch.len_utf8();
+            self.current = self.next_char;
+            self.next_char = self.chars.next();
+            Some(ch)
+        } else {
+            None
         }
-
-        None
     }
 
-    fn next_impl(&mut self) -> Option<TemplateData> {
-        while self.pos < self.length {
-            let char = self.source[self.pos];
+    fn peek(&self) -> Option<char> {
+        self.current
+    }
 
+    fn peek_next(&self) -> Option<char> {
+        self.next_char
+    }
+
+    fn next_impl(&mut self) -> Result<Option<TemplateData>, String> {
+        loop {
             match self.state {
                 ParserState::Normal => {
-                    if char == '{' && self.pos + 1 < self.length && self.source[self.pos + 1] == '{'
-                    {
-                        let str = self.source[self.last_pos..self.pos].to_vec();
-                        self.pos += 2;
-                        self.last_pos = self.pos;
+                    if let Some(ch) = self.peek() {
+                        if ch == '{' && self.peek_next() == Some('{') {
+                            // Extract string before {{
+                            let str = &self.source[self.last_byte_pos..self.byte_pos];
 
-                        self.state = ParserState::InKey;
+                            // Skip {{
+                            self.advance(); // '{'
+                            self.advance(); // '{'
 
-                        return Some(TemplateData::String(str.iter().collect::<String>()));
+                            self.last_byte_pos = self.byte_pos;
+                            self.state = ParserState::InKey;
+
+                            return Ok(Some(TemplateData::String(str.to_string())));
+                        } else {
+                            self.advance();
+                        }
+                    } else {
+                        // End of input
+                        if self.last_byte_pos < self.source.len() {
+                            let str = &self.source[self.last_byte_pos..];
+                            self.last_byte_pos = self.source.len();
+
+                            if !str.is_empty() {
+                                return Ok(Some(TemplateData::String(str.to_string())));
+                            }
+                        }
+                        return Ok(None);
                     }
                 }
                 ParserState::InKey => {
-                    if char == '}' && self.pos + 1 < self.length && self.source[self.pos + 1] == '}'
-                    {
-                        let code = self.source[self.last_pos - 1..self.pos + 1]
-                            .iter()
-                            .collect::<String>()
-                            .trim()
-                            .to_string();
+                    if let Some(ch) = self.peek() {
+                        if ch == '}' && self.peek_next() == Some('}') {
+                            // Extract code between {{ and }} but include single braces
+                            let inner_code = &self.source[self.last_byte_pos..self.byte_pos];
+                            let code = format!("{{ {} }}", inner_code.trim());
 
-                        self.pos += 2;
-                        self.last_pos = self.pos;
-                        self.state = ParserState::Normal;
+                            // Skip }}
+                            self.advance(); // '}'
+                            self.advance(); // '}'
 
-                        return Some(TemplateData::Code(code));
+                            self.last_byte_pos = self.byte_pos;
+                            self.state = ParserState::Normal;
+
+                            return Ok(Some(TemplateData::Code(code)));
+                        } else {
+                            self.advance();
+                        }
+                    } else {
+                        // End of input while in key state
+                        return Err("Unexpected end of input while parsing key".to_string());
                     }
                 }
             }
-
-            self.pos += 1;
         }
-
-        if self.last_pos < self.length {
-            let str = self.source[self.last_pos..].iter().collect::<String>();
-            self.last_pos = self.length; // Update last_pos to the end of the source
-
-            if str.is_empty() {
-                return None; // No more data to return
-            }
-
-            return Some(TemplateData::String(str));
-        }
-
-        None
     }
 }
 
@@ -102,18 +140,53 @@ mod test {
         let input = "<h1>Hello, {{ name }}!</h1> {{ test }}";
         let mut parser = Parser::new(input);
 
-        let next = parser.next().unwrap();
+        let next = parser.next().unwrap().unwrap();
         assert_eq!(next, TemplateData::String("<h1>Hello, ".to_string()));
 
-        let next = parser.next().unwrap();
+        let next = parser.next().unwrap().unwrap();
         assert_eq!(next, TemplateData::Code("{ name }".to_string()));
 
-        let next = parser.next().unwrap();
+        let next = parser.next().unwrap().unwrap();
         assert_eq!(next, TemplateData::String("!</h1> ".to_string()));
 
-        let next = parser.next().unwrap();
+        let next = parser.next().unwrap().unwrap();
         assert_eq!(next, TemplateData::Code("{ test }".to_string()));
 
         assert!(parser.next().is_none());
+    }
+
+    #[test]
+    fn test_parser_error_handling() {
+        let input = "Hello {{ unclosed";
+        let mut parser = Parser::new(input);
+
+        let next = parser.next().unwrap().unwrap();
+        assert_eq!(next, TemplateData::String("Hello ".to_string()));
+
+        // This should return an error
+        let result = parser.next().unwrap();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unexpected end of input"));
+    }
+
+    #[test]
+    fn test_parser_collect_success() {
+        let input = "Hello {{ name }}!";
+        let parser = Parser::new(input);
+
+        let results: Result<Vec<TemplateData>, String> = parser.collect();
+        assert!(results.is_ok());
+
+        let data = results.unwrap();
+        assert_eq!(data.len(), 3);
+    }
+
+    #[test]
+    fn test_parser_collect_error() {
+        let input = "Hello {{ unclosed";
+        let parser = Parser::new(input);
+
+        let results: Result<Vec<TemplateData>, String> = parser.collect();
+        assert!(results.is_err());
     }
 }

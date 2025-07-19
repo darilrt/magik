@@ -1,4 +1,22 @@
-// trait Renderable with Copy and Clone implementations
+macro_rules! impl_renderable_with_to_string {
+    ($type:ty) => {
+        impl Renderable for $type {
+            fn render(&self) -> String {
+                self.to_string()
+            }
+        }
+    };
+    ($type:ty, $($rest:ty),+) => {
+        impl_renderable_with_to_string!($type);
+        impl_renderable_with_to_string!($($rest),+);
+    };
+}
+
+// Implementations for primitive types and common types
+impl_renderable_with_to_string!(
+    String, &String, &str, u8, u16, u32, u64, i8, i16, i32, i64, usize, isize, f32, f64, bool, char
+);
+
 pub trait Renderable {
     /// Renders the object to a string.
     fn render(&self) -> String;
@@ -14,42 +32,6 @@ pub trait Renderable {
 impl<T: Renderable + 'static> From<T> for Box<dyn Renderable> {
     fn from(value: T) -> Self {
         Box::new(value)
-    }
-}
-
-impl Renderable for String {
-    fn render(&self) -> String {
-        self.clone()
-    }
-}
-
-impl Renderable for &String {
-    fn render(&self) -> String {
-        self.to_string()
-    }
-}
-
-impl Renderable for &str {
-    fn render(&self) -> String {
-        self.to_string()
-    }
-}
-
-impl Renderable for i32 {
-    fn render(&self) -> String {
-        self.to_string()
-    }
-}
-
-impl Renderable for f64 {
-    fn render(&self) -> String {
-        self.to_string()
-    }
-}
-
-impl Renderable for bool {
-    fn render(&self) -> String {
-        self.to_string()
     }
 }
 
