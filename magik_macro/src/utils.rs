@@ -1,28 +1,35 @@
-use std::vec;
+use std::{borrow::Cow, vec};
 
+use magik::Error;
 use quote::{quote, quote_spanned};
 use syn::{Ident, ItemStruct, Stmt, parse_quote_spanned, spanned::Spanned};
 
 use crate::is_block_returning_value;
 
-pub fn read_template_file(path: &str) -> String {
-    let basedir = std::env::current_dir().expect("Failed to get current directory");
+pub fn read_template_file(path: &str) -> Result<String, magik::Error> {
+    let basedir = std::env::current_dir()
+        .map_err(|_| Error::TemplateReadError(Cow::Borrowed("Cannot access current directory")))?;
     let full_path = basedir.join(path);
 
     if !full_path.exists() {
-        panic!("Template file does not exist at: {}", path);
+        return Err(Error::TemplateNotFound(Cow::Owned(format!(
+            "Template file does not exist at: {}",
+            path
+        ))));
     }
 
-    std::fs::read_to_string(full_path)
-        .unwrap_or_else(|_| panic!("Failed to read template file at: {}", path))
+    match std::fs::read_to_string(full_path) {
+        Ok(content) => Ok(content),
+        Err(_) => Err(Error::TemplateReadError(Cow::Owned(format!(
+            "Failed to read template file at: {}",
+            path
+        )))),
+    }
 }
 
-pub fn parse_template(input: &str) -> Vec<magik::TemplateData> {
+pub fn parse_template(input: &str) -> Result<Vec<magik::TemplateData>, magik::Error> {
     let parser = magik::Parser::new(input);
-
-    parser
-        .collect::<Result<Vec<magik::TemplateData>, String>>()
-        .unwrap_or_else(|err| panic!("Template parsing error: {}", err))
+    parser.collect::<Result<Vec<magik::TemplateData>, Error>>()
 }
 
 pub fn compile_template(
@@ -64,7 +71,15 @@ pub fn compile_template(
                 // call a function to check if block returns a value
                 if is_block_returning_value(&code) {
                     let mut stmts = code.stmts.clone();
-                    let last_stmt = stmts.pop().unwrap();
+                    let last_stmt = match stmts.pop() {
+                        Some(stmt) => stmt,
+                        None => {
+                            return syn::Error::new_spanned(
+                                &code,
+                                "Empty code block marked as returning value"
+                            ).to_compile_error();
+                        }
+                    };
 
                     let new_last = match last_stmt {
                         Stmt::Expr(expr, None) => Stmt::Expr(

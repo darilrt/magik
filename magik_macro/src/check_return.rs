@@ -59,22 +59,25 @@ mod tests {
 
     #[test]
     fn test_is_block_returning_value() {
-        let code: syn::Block = syn::parse_str("{ let x = 5; x }").unwrap();
+        let code: syn::Block =
+            syn::parse_str("{ let x = 5; x }").expect("Should parse valid block");
         assert!(is_block_returning_value(&code));
 
-        let code: syn::Block = syn::parse_str("{ let x = 5; }").unwrap();
+        let code: syn::Block = syn::parse_str("{ let x = 5; }").expect("Should parse valid block");
         assert!(!is_block_returning_value(&code));
 
-        let code: syn::Block = syn::parse_str("{ if true { 1 } else { 2 } }").unwrap();
+        let code: syn::Block =
+            syn::parse_str("{ if true { 1 } else { 2 } }").expect("Should parse valid block");
         assert!(is_block_returning_value(&code));
     }
 
     #[test]
     fn test_expr_has_return_value() {
-        let expr: syn::Expr = syn::parse_str("if true { 1 } else { 2 }").unwrap();
+        let expr: syn::Expr =
+            syn::parse_str("if true { 1 } else { 2 }").expect("Should parse valid expression");
         assert!(expr_has_return_value(&expr));
 
-        let expr: syn::Expr = syn::parse_str("let x = 5").unwrap();
+        let expr: syn::Expr = syn::parse_str("let x = 5").expect("Should parse valid expression");
         assert!(!expr_has_return_value(&expr));
     }
 }

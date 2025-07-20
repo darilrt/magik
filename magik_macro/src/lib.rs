@@ -16,20 +16,33 @@ pub fn template(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(attr as Attributes);
 
     let source = if let Some(path) = &input.path {
-        read_template_file(path)
+        read_template_file(path).map_err(|e| syn::Error::new_spanned(path, e.to_string()))
     } else if let Some(source) = &input.source {
-        source.clone()
+        Ok(source.clone())
     } else {
-        panic!("Either 'path' or 'source' attribute must be provided")
+        Err(syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "Either 'path' or 'source' attribute must be provided",
+        ))
+    };
+
+    let source = match source {
+        Ok(src) => src,
+        Err(err) => return err.to_compile_error().into(),
     };
 
     let item = parse_macro_input!(item as ItemStruct);
 
-    let code = compile_template(
-        &parse_template(source.as_str()),
-        &item,
-        input.context.as_deref(),
-    );
+    let template = match parse_template(source.as_str()) {
+        Ok(template) => template,
+        Err(err) => {
+            return syn::Error::new_spanned(item, err.to_string())
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    let code = compile_template(&template, &item, input.context.as_deref());
 
     implement_renderable(&item, &code)
 }
@@ -40,7 +53,6 @@ fn implement_renderable(item: &ItemStruct, code: &proc_macro2::TokenStream) -> T
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote! {
-
         #item
 
         impl #impl_generics magik::Renderable for #name #ty_generics #where_clause {

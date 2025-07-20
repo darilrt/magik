@@ -1,3 +1,5 @@
+use crate::Error;
+
 macro_rules! impl_renderable_with_to_string {
     ($type:ty) => {
         impl Renderable for $type {
@@ -17,16 +19,19 @@ impl_renderable_with_to_string!(
     String, &String, &str, u8, u16, u32, u64, i8, i16, i32, i64, usize, isize, f32, f64, bool, char
 );
 
+/// Trait for types that can be rendered to a string.
+/// This trait is used when the rendering logic is simple and does not require error handling.
 pub trait Renderable {
     /// Renders the object to a string.
     fn render(&self) -> String;
+}
 
-    fn boxed(self) -> Box<dyn Renderable>
-    where
-        Self: Sized + 'static,
-    {
-        Box::new(self)
-    }
+/// Trait for types that can be rendered with error handling.
+/// This is useful for templates that may fail to render.
+/// This trait allows for more complex rendering logic that can handle errors gracefully.
+pub trait TryRenderable {
+    /// Attempts to render the object, returning a Result.
+    fn try_render(&self) -> Result<String, Error>;
 }
 
 impl<T: Renderable + 'static> From<T> for Box<dyn Renderable> {

@@ -1,4 +1,6 @@
-use crate::template::TemplateData;
+use std::borrow::Cow;
+
+use crate::{Error, template::TemplateData};
 
 #[derive(Debug, PartialEq)]
 enum State {
@@ -17,7 +19,7 @@ pub struct Parser<'a> {
 }
 
 impl Iterator for Parser<'_> {
-    type Item = Result<TemplateData, String>;
+    type Item = Result<TemplateData, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.next_impl() {
@@ -70,7 +72,7 @@ impl<'a> Parser<'a> {
         self.next_char
     }
 
-    fn next_impl(&mut self) -> Result<Option<TemplateData>, String> {
+    fn next_impl(&mut self) -> Result<Option<TemplateData>, Error> {
         loop {
             match self.state {
                 State::Outside => {
@@ -123,7 +125,9 @@ impl<'a> Parser<'a> {
                         }
                     } else {
                         // End of input while in key state
-                        return Err("Unexpected end of input while parsing key".to_string());
+                        return Err(Error::ParseError(Cow::Borrowed(
+                            "Unexpected end of input while parsing key",
+                        )));
                     }
                 }
             }
@@ -133,24 +137,30 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod test {
+    use crate::Error;
+
     use super::{Parser, TemplateData};
+
+    // Helper macro for cleaner test assertions
+    macro_rules! assert_next {
+        ($parser:expr, $expected:expr) => {
+            let token = $parser
+                .next()
+                .expect("Expected more tokens from parser")
+                .expect("Token should parse without errors");
+            assert_eq!(token, $expected);
+        };
+    }
 
     #[test]
     fn test_parser() {
         let input = "<h1>Hello, {{ name }}!</h1> {{ test }}";
         let mut parser = Parser::new(input);
 
-        let next = parser.next().unwrap().unwrap();
-        assert_eq!(next, TemplateData::String("<h1>Hello, ".to_string()));
-
-        let next = parser.next().unwrap().unwrap();
-        assert_eq!(next, TemplateData::Code("{ name }".to_string()));
-
-        let next = parser.next().unwrap().unwrap();
-        assert_eq!(next, TemplateData::String("!</h1> ".to_string()));
-
-        let next = parser.next().unwrap().unwrap();
-        assert_eq!(next, TemplateData::Code("{ test }".to_string()));
+        assert_next!(parser, TemplateData::String("<h1>Hello, ".to_string()));
+        assert_next!(parser, TemplateData::Code("{ name }".to_string()));
+        assert_next!(parser, TemplateData::String("!</h1> ".to_string()));
+        assert_next!(parser, TemplateData::Code("{ test }".to_string()));
 
         assert!(parser.next().is_none());
     }
@@ -160,13 +170,19 @@ mod test {
         let input = "Hello {{ unclosed";
         let mut parser = Parser::new(input);
 
-        let next = parser.next().unwrap().unwrap();
-        assert_eq!(next, TemplateData::String("Hello ".to_string()));
+        assert_next!(parser, TemplateData::String("Hello ".to_string()));
 
         // This should return an error
-        let result = parser.next().unwrap();
+        let result = parser
+            .next()
+            .expect("Should have next token (even if error)");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unexpected end of input"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unexpected end of input while parsing key")
+        );
     }
 
     #[test]
@@ -174,10 +190,10 @@ mod test {
         let input = "Hello {{ name }}!";
         let parser = Parser::new(input);
 
-        let results: Result<Vec<TemplateData>, String> = parser.collect();
+        let results: Result<Vec<TemplateData>, Error> = parser.collect();
         assert!(results.is_ok());
 
-        let data = results.unwrap();
+        let data = results.expect("Collection should succeed");
         assert_eq!(data.len(), 3);
     }
 
@@ -186,7 +202,7 @@ mod test {
         let input = "Hello {{ unclosed";
         let parser = Parser::new(input);
 
-        let results: Result<Vec<TemplateData>, String> = parser.collect();
+        let results: Result<Vec<TemplateData>, Error> = parser.collect();
         assert!(results.is_err());
     }
 }
