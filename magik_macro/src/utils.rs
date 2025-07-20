@@ -34,15 +34,15 @@ pub fn compile_template(
     let capacity = tmp.len();
 
     quotes.push(quote! {
+        use std::borrow::Cow;
         let mut magik__result = Vec::with_capacity(#capacity);
-        // let mut result = String::new();
     });
 
     for data in tmp {
         match data {
             magik::TemplateData::String(html) => {
                 quotes.push(quote! {
-                   magik__result.push(#html.to_string());
+                   magik__result.push(Cow::Borrowed(#html));
                 });
             }
             magik::TemplateData::Code(code) => {
@@ -86,7 +86,9 @@ pub fn compile_template(
                     };
 
                     quotes.push(quote_spanned! {
-                        code.span() => magik__result.push(#new_block);
+                        code.span() => magik__result.push(Cow::Owned(
+                            #new_block
+                        ));
                     });
                 } else {
                     code.stmts.iter().for_each(|stmt| {
