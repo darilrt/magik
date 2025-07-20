@@ -25,7 +25,11 @@ pub fn template(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let item = parse_macro_input!(item as ItemStruct);
 
-    let code = compile_template(&parse_template(source.as_str()), &item);
+    let code = compile_template(
+        &parse_template(source.as_str()),
+        &item,
+        input.context.as_deref(),
+    );
 
     implement_renderable(&item, &code)
 }
@@ -59,6 +63,7 @@ fn implement_renderable(item: &ItemStruct, code: &proc_macro2::TokenStream) -> T
 struct Attributes {
     path: Option<String>,
     source: Option<String>,
+    context: Option<String>,
 }
 
 impl Parse for Attributes {
@@ -67,40 +72,58 @@ impl Parse for Attributes {
             return Ok(Attributes {
                 path: None,
                 source: Some(val.value()),
+                context: None,
             });
         }
 
-        let key: syn::Ident = input.parse()?;
-        let _ = input.parse::<syn::Token![=]>()?;
-        let path: syn::LitStr = input.parse()?;
+        let mut path = None;
+        let mut source = None;
+        let mut context = None;
 
-        if key == "path" {
-            let path_str = path.value();
+        while !input.is_empty() {
+            let key: syn::Ident = input.parse()?;
+            let _ = input.parse::<syn::Token![=]>()?;
+            let value: syn::LitStr = input.parse()?;
 
-            if path_str.is_empty() {
-                return Err(syn::Error::new_spanned(path, "Path cannot be empty"));
+            match key.to_string().as_str() {
+                "path" => {
+                    if source.is_some() {
+                        return Err(syn::Error::new_spanned(
+                            key,
+                            "Cannot specify both 'path' and 'source'",
+                        ));
+                    }
+                    path = Some(value.value());
+                }
+                "source" => {
+                    if path.is_some() {
+                        return Err(syn::Error::new_spanned(
+                            key,
+                            "Cannot specify both 'path' and 'source'",
+                        ));
+                    }
+                    source = Some(value.value());
+                }
+                "context" => {
+                    context = Some(value.value());
+                }
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        key,
+                        "Expected 'path', 'source', or 'context' attribute",
+                    ));
+                }
             }
 
-            Ok(Attributes {
-                path: Some(path_str),
-                source: None,
-            })
-        } else if key == "source" {
-            let source_str = path.value();
-
-            if source_str.is_empty() {
-                return Err(syn::Error::new_spanned(path, "Source cannot be empty"));
+            if input.peek(syn::Token![,]) {
+                let _ = input.parse::<syn::Token![,]>()?;
             }
-
-            Ok(Attributes {
-                path: None,
-                source: Some(source_str),
-            })
-        } else {
-            Err(syn::Error::new_spanned(
-                key,
-                "Expected 'path' or 'source' attribute or a string literal",
-            ))
         }
+
+        Ok(Attributes {
+            path,
+            source,
+            context,
+        })
     }
 }

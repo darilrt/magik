@@ -1,9 +1,9 @@
 use crate::template::TemplateData;
 
 #[derive(Debug, PartialEq)]
-enum ParserState {
-    Normal,
-    InKey,
+enum State {
+    Outside,
+    Inside,
 }
 
 pub struct Parser<'a> {
@@ -13,7 +13,7 @@ pub struct Parser<'a> {
     next_char: Option<char>,
     byte_pos: usize,
     last_byte_pos: usize,
-    state: ParserState,
+    state: State,
 }
 
 impl Iterator for Parser<'_> {
@@ -47,7 +47,7 @@ impl<'a> Parser<'a> {
             next_char,
             byte_pos: 0,
             last_byte_pos: 0,
-            state: ParserState::Normal,
+            state: State::Outside,
         }
     }
 
@@ -73,7 +73,7 @@ impl<'a> Parser<'a> {
     fn next_impl(&mut self) -> Result<Option<TemplateData>, String> {
         loop {
             match self.state {
-                ParserState::Normal => {
+                State::Outside => {
                     if let Some(ch) = self.peek() {
                         if ch == '{' && self.peek_next() == Some('{') {
                             // Extract string before {{
@@ -84,7 +84,7 @@ impl<'a> Parser<'a> {
                             self.advance(); // '{'
 
                             self.last_byte_pos = self.byte_pos;
-                            self.state = ParserState::InKey;
+                            self.state = State::Inside;
 
                             return Ok(Some(TemplateData::String(str.to_string())));
                         } else {
@@ -103,7 +103,7 @@ impl<'a> Parser<'a> {
                         return Ok(None);
                     }
                 }
-                ParserState::InKey => {
+                State::Inside => {
                     if let Some(ch) = self.peek() {
                         if ch == '}' && self.peek_next() == Some('}') {
                             // Extract code between {{ and }} but include single braces
@@ -115,7 +115,7 @@ impl<'a> Parser<'a> {
                             self.advance(); // '}'
 
                             self.last_byte_pos = self.byte_pos;
-                            self.state = ParserState::Normal;
+                            self.state = State::Outside;
 
                             return Ok(Some(TemplateData::Code(code)));
                         } else {

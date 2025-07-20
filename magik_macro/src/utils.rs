@@ -1,7 +1,7 @@
 use std::vec;
 
 use quote::{quote, quote_spanned};
-use syn::{ItemStruct, Stmt, parse_quote_spanned, spanned::Spanned};
+use syn::{Ident, ItemStruct, Stmt, parse_quote_spanned, spanned::Spanned};
 
 use crate::is_block_returning_value;
 
@@ -28,13 +28,13 @@ pub fn parse_template(input: &str) -> Vec<magik::TemplateData> {
 pub fn compile_template(
     tmp: &Vec<magik::TemplateData>,
     struct_item: &ItemStruct,
+    context: Option<&str>,
 ) -> proc_macro2::TokenStream {
     let mut quotes = vec![];
 
     let capacity = tmp.len();
 
     quotes.push(quote! {
-        use std::borrow::Cow;
         let mut magik__result = Vec::with_capacity(#capacity);
     });
 
@@ -42,7 +42,7 @@ pub fn compile_template(
         match data {
             magik::TemplateData::String(html) => {
                 quotes.push(quote! {
-                   magik__result.push(Cow::Borrowed(#html));
+                   magik__result.push(std::borrow::Cow::Borrowed(#html));
                 });
             }
             magik::TemplateData::Code(code) => {
@@ -86,7 +86,7 @@ pub fn compile_template(
                     };
 
                     quotes.push(quote_spanned! {
-                        code.span() => magik__result.push(Cow::Owned(
+                        code.span() => magik__result.push(std::borrow::Cow::Owned(
                             #new_block
                         ));
                     });
@@ -105,6 +105,8 @@ pub fn compile_template(
     let generics = &struct_item.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+    let context = Ident::new(context.unwrap_or("props"), proc_macro2::Span::call_site());
+
     quote! {
         mod __hidden {
             use magik::Choosable;
@@ -115,7 +117,7 @@ pub fn compile_template(
                 value.render()
             }
 
-            pub fn magik__render #impl_generics(props: &#struct_name #ty_generics) -> String #where_clause {
+            pub fn magik__render #impl_generics(#context: &#struct_name #ty_generics) -> String #where_clause {
                 #(#quotes)*
                 magik__result.concat()
             }
