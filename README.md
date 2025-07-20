@@ -1,6 +1,10 @@
 # Magik 🪄
 
-A templating library for Rust that allows creating compile-time safe templates with type-safe syntax and powerful features.
+A templating library for Rust that allows creating compile-time safe templates that compile to native Rust code, providing type safety and powerful features.
+
+It uses rust syntax for templates, allowing you to write pure Rust code inside your templates. This enables full access to Rust's type system and features and allows you to integrate seamlessly with Rust's ecosystem.
+
+> **Disclaimer**: This project is a **work in progress** and is not yet production-ready. It needs further testing, documentation, benchmarks, and refinement before being considered stable for production use.
 
 ## Table of Contents
 
