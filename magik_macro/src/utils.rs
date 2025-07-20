@@ -48,16 +48,18 @@ pub fn compile_template(
     for data in tmp {
         match data {
             magik::TemplateData::String(html) => {
+                let html_str = html.as_ref();
                 quotes.push(quote! {
-                   magik__result.push(std::borrow::Cow::Borrowed(#html));
+                   magik__result.push(std::borrow::Cow::Borrowed(#html_str));
                 });
             }
             magik::TemplateData::Code(code) => {
-                let code: syn::Block = match syn::parse_str(code) {
+                let code_str = code.as_ref();
+                let code: syn::Block = match syn::parse_str(code_str) {
                     Ok(expr) => expr,
                     Err(err) => {
                         return syn::Error::new_spanned(
-                            code,
+                            code_str,
                             format!("Error parsing code: {}", err),
                         )
                         .to_compile_error();
@@ -76,8 +78,9 @@ pub fn compile_template(
                         None => {
                             return syn::Error::new_spanned(
                                 &code,
-                                "Empty code block marked as returning value"
-                            ).to_compile_error();
+                                "Empty code block marked as returning value",
+                            )
+                            .to_compile_error();
                         }
                     };
 

@@ -18,20 +18,22 @@ pub struct Parser<'a> {
     state: State,
 }
 
-impl Iterator for Parser<'_> {
-    type Item = Result<TemplateData, Error>;
+impl<'a> Iterator for Parser<'a> {
+    type Item = Result<TemplateData<'a>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.next_impl() {
-            Ok(Some(data)) => {
-                match data {
-                    TemplateData::String(s) if s.is_empty() => self.next(), // Recursivamente busca el siguiente
-                    TemplateData::Code(code) if code.trim().is_empty() => self.next(),
-                    _ => Some(Ok(data)),
+        loop {
+            match self.next_impl() {
+                Ok(Some(data)) => {
+                    match &data {
+                        TemplateData::String(s) if s.is_empty() => continue, // Continue loop instead of recursion
+                        TemplateData::Code(code) if code.trim().is_empty() => continue,
+                        _ => return Some(Ok(data)),
+                    }
                 }
+                Ok(None) => return None,
+                Err(e) => return Some(Err(e)),
             }
-            Ok(None) => None,
-            Err(e) => Some(Err(e)),
         }
     }
 }
@@ -72,7 +74,7 @@ impl<'a> Parser<'a> {
         self.next_char
     }
 
-    fn next_impl(&mut self) -> Result<Option<TemplateData>, Error> {
+    fn next_impl(&mut self) -> Result<Option<TemplateData<'a>>, Error> {
         loop {
             match self.state {
                 State::Outside => {
@@ -88,7 +90,7 @@ impl<'a> Parser<'a> {
                             self.last_byte_pos = self.byte_pos;
                             self.state = State::Inside;
 
-                            return Ok(Some(TemplateData::String(str.to_string())));
+                            return Ok(Some(TemplateData::String(Cow::Borrowed(str))));
                         } else {
                             self.advance();
                         }
@@ -99,7 +101,7 @@ impl<'a> Parser<'a> {
                             self.last_byte_pos = self.source.len();
 
                             if !str.is_empty() {
-                                return Ok(Some(TemplateData::String(str.to_string())));
+                                return Ok(Some(TemplateData::String(Cow::Borrowed(str))));
                             }
                         }
                         return Ok(None);
@@ -109,8 +111,7 @@ impl<'a> Parser<'a> {
                     if let Some(ch) = self.peek() {
                         if ch == '}' && self.peek_next() == Some('}') {
                             // Extract code between {{ and }} but include single braces
-                            let inner_code = &self.source[self.last_byte_pos..self.byte_pos];
-                            let code = format!("{{ {} }}", inner_code.trim());
+                            let code = &self.source[self.last_byte_pos - 1..self.byte_pos + 1];
 
                             // Skip }}
                             self.advance(); // '}'
@@ -119,7 +120,7 @@ impl<'a> Parser<'a> {
                             self.last_byte_pos = self.byte_pos;
                             self.state = State::Outside;
 
-                            return Ok(Some(TemplateData::Code(code)));
+                            return Ok(Some(TemplateData::Code(Cow::Borrowed(code))));
                         } else {
                             self.advance();
                         }
@@ -148,7 +149,7 @@ mod test {
                 .next()
                 .expect("Expected more tokens from parser")
                 .expect("Token should parse without errors");
-            assert_eq!(token, $expected);
+            assert_eq!(token.as_str(), $expected);
         };
     }
 
@@ -157,10 +158,10 @@ mod test {
         let input = "<h1>Hello, {{ name }}!</h1> {{ test }}";
         let mut parser = Parser::new(input);
 
-        assert_next!(parser, TemplateData::String("<h1>Hello, ".to_string()));
-        assert_next!(parser, TemplateData::Code("{ name }".to_string()));
-        assert_next!(parser, TemplateData::String("!</h1> ".to_string()));
-        assert_next!(parser, TemplateData::Code("{ test }".to_string()));
+        assert_next!(parser, "<h1>Hello, ");
+        assert_next!(parser, "{ name }");
+        assert_next!(parser, "!</h1> ");
+        assert_next!(parser, "{ test }");
 
         assert!(parser.next().is_none());
     }
@@ -170,7 +171,7 @@ mod test {
         let input = "Hello {{ unclosed";
         let mut parser = Parser::new(input);
 
-        assert_next!(parser, TemplateData::String("Hello ".to_string()));
+        assert_next!(parser, "Hello ");
 
         // This should return an error
         let result = parser
