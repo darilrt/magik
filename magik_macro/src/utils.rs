@@ -2,7 +2,7 @@ use std::{borrow::Cow, vec};
 
 use magik::Error;
 use quote::{quote, quote_spanned};
-use syn::{Ident, ItemStruct, Stmt, parse_quote_spanned, spanned::Spanned};
+use syn::{Block, Ident, ItemStruct, Stmt, parse_quote_spanned, spanned::Spanned};
 
 use crate::is_block_returning_value;
 
@@ -73,35 +73,32 @@ pub fn compile_template(
                 // call a function to check if block returns a value
                 if is_block_returning_value(&code) {
                     let mut stmts = code.stmts.clone();
-                    let last_stmt = match stmts.pop() {
-                        Some(stmt) => stmt,
-                        None => {
-                            return syn::Error::new_spanned(
-                                &code,
-                                "Empty code block marked as returning value",
-                            )
-                            .to_compile_error();
-                        }
-                    };
+                    // let last_stmt = match stmts.pop() {
+                    //     Some(stmt) => stmt,
+                    //     None => {
+                    //         return syn::Error::new_spanned(
+                    //             &code,
+                    //             "Empty code block marked as returning value",
+                    //         )
+                    //         .to_compile_error();
+                    //     }
+                    // };
 
-                    let new_last = match last_stmt {
-                        Stmt::Expr(expr, None) => Stmt::Expr(
-                            syn::Expr::Call(parse_quote_spanned! {expr.span() =>
-                                magik__render_and_validate(&#expr)
-                            }),
-                            None,
-                        ),
-                        other => other,
-                    };
+                    // let new_last = match last_stmt {
+                    //     Stmt::Expr(expr, None) => add_render_to_block(&expr),
+                    //     other => other,
+                    // };
 
-                    let new_block = syn::Block {
-                        brace_token: code.brace_token,
-                        stmts: {
-                            let mut stmts2 = stmts;
-                            stmts2.push(new_last);
-                            stmts2
-                        },
-                    };
+                    // let new_block = syn::Block {
+                    //     brace_token: code.brace_token,
+                    //     stmts: {
+                    //         let mut stmts2 = stmts;
+                    //         stmts2.push(new_last);
+                    //         stmts2
+                    //     },
+                    // };
+
+                    let new_block = add_render_to_block(&code);
 
                     quotes.push(quote_spanned! {
                         code.span() => magik__result.push(std::borrow::Cow::Owned(
@@ -141,4 +138,37 @@ pub fn compile_template(
             }
         }
     }
+}
+
+fn add_render_to_block(block: &Block) -> Result<Stmt, syn::Error> {
+    let last = match block.stmts.last() {
+        Some(stmt) => stmt,
+        None => {
+            return Ok(Stmt::Expr(
+                syn::Expr::Call(parse_quote_spanned! {block.span() => "".to_string() }),
+                None,
+            ));
+        }
+    };
+
+    // let last_expr = match last {
+    //     Stmt::Expr(expr, None) => expr,
+    //     _ => {
+    //         return Ok(last.clone());
+    //     }
+    // };
+
+    // let new_last = match last_expr {
+    //     syn::Expr::Break(expr) => syn::Expr::Call(parse_quote_spanned! {block.span() =>
+    //         magik__render_and_validate(#expr)
+    //     }),
+    //     expr => expr.clone(),
+    // };
+
+    Ok(Stmt::Expr(
+        parse_quote_spanned! {block.span() =>
+            magik__render_and_validate(&#block)
+        },
+        None,
+    ))
 }
